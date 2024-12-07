@@ -2,20 +2,19 @@ trigger:
 - main
 
 pool:
-  name: 'Default' # Default agent pool where your agent is configured
+  name: 'Default'
   demands:
-    - agent.name -equals smh # Use your self-hosted agent named 'smh'
+    - agent.name -equals smh
 
 variables:
 - group: realworld-app
 
 steps:
-# Use Node.js version 18.x
-- task: UseNode@2
-  inputs:
-    versionSpec: '18.x'
-    checkLatest: true
-  displayName: 'Install Node.js'
+# Verify Node.js and npm installation
+- script: |
+    node --version
+    npm --version
+  displayName: 'Verify Node.js and npm Installation'
 
 # Install dependencies using pnpm
 - script: |
@@ -62,4 +61,3 @@ steps:
     targetPath: '$(Build.ArtifactStagingDirectory)' # Make sure this directory exists or is correctly set
     artifact: 'drop'
   displayName: 'Publish Pipeline Artifact'
-
