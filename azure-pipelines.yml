@@ -1,0 +1,53 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+- group: realworld-app
+
+steps:
+- task: UseNode@2
+  inputs:
+    versionSpec: '18.x'
+  displayName: 'Install Node.js'
+
+- script: |
+    npm install -g pnpm
+    pnpm install
+  displayName: 'Install dependencies'
+
+- task: SonarQubePrepare@5
+  inputs:
+    SonarQube: 'SonarQubeServiceConnection'
+    scannerMode: 'CLI'
+    configMode: 'manual'
+    cliProjectKey: $(SONARQUBE_PROJECT_KEY)
+    cliSources: '.'
+    extraProperties: |
+      sonar.host.url=$(SONARQUBE_SERVER)
+      sonar.login=$(SONARQUBE_TOKEN)
+  displayName: 'Prepare SonarQube analysis'
+
+- script: |
+    pnpm run build
+  displayName: 'Build application'
+
+- task: SonarQubeAnalyze@5
+  displayName: 'Run SonarQube analysis'
+
+- task: Docker@2
+  inputs:
+    command: 'buildAndPush'
+    repository: $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)
+    dockerfile: '**/Dockerfile'
+    tags: |
+      latest
+  displayName: 'Build and push Docker image'
+
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)'
+    artifact: 'drop'
+  displayName: 'Publish Pipeline Artifact'
