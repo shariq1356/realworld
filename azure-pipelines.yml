@@ -8,46 +8,55 @@ variables:
 - group: realworld-app
 
 steps:
+# Use Node.js version 18.x
 - task: UseNode@2
   inputs:
     versionSpec: '18.x'
+    checkLatest: true
   displayName: 'Install Node.js'
 
+# Install dependencies using pnpm
 - script: |
     npm install -g pnpm
     pnpm install
   displayName: 'Install dependencies'
 
+# Prepare for SonarQube analysis
 - task: SonarQubePrepare@5
   inputs:
-    SonarQube: 'SonarQubeServiceConnection'
+    SonarQube: 'SonarQubeServiceConnection' # Replace with your SonarQube service connection name
     scannerMode: 'CLI'
     configMode: 'manual'
-    cliProjectKey: $(SONARQUBE_PROJECT_KEY)
+    cliProjectKey: '$(SONARQUBE_PROJECT_KEY)' # Replace with your project key
     cliSources: '.'
     extraProperties: |
       sonar.host.url=$(SONARQUBE_SERVER)
       sonar.login=$(SONARQUBE_TOKEN)
   displayName: 'Prepare SonarQube analysis'
 
+# Build the application
 - script: |
     pnpm run build
   displayName: 'Build application'
 
+# Run SonarQube analysis
 - task: SonarQubeAnalyze@5
   displayName: 'Run SonarQube analysis'
 
+# Build and push Docker image
 - task: Docker@2
   inputs:
     command: 'buildAndPush'
-    repository: $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)
+    containerRegistry: '$(DOCKER_REGISTRY_SERVICE_CONNECTION)' # Replace with your Docker registry service connection name
+    repository: '$(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)' # Replace with your Docker repository name
     dockerfile: '**/Dockerfile'
     tags: |
       latest
   displayName: 'Build and push Docker image'
 
+# Publish pipeline artifact
 - task: PublishPipelineArtifact@1
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)'
+    targetPath: '$(Build.ArtifactStagingDirectory)' # Make sure this directory exists or is correctly set
     artifact: 'drop'
   displayName: 'Publish Pipeline Artifact'
